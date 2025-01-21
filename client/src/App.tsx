@@ -1,6 +1,23 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Button, Typography } from '@mui/material';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Container,
+  AppBar,
+  Toolbar,
+  IconButton,
+} from '@mui/material';
+import { Logout } from '@mui/icons-material';
 
 interface Event{
   id: string;
@@ -44,79 +61,107 @@ function App() {
     setFilterDate('');
   }
 
-  const extractDate=(dateTime: string): string=>{
-    return new Date(dateTime).toLocaleDateString();
-  }
-
-  const extractTime=(dateTime: string): string=>{
-    return new Date(dateTime).toLocaleTimeString()
-  }
+  const extractDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString();
+  };
+  
+  const extractTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleTimeString();
+  };
 
   useEffect(()=>{
     fetchEvents();
-    // const urlParams=new URLSearchParams(window.location.search);
-    // const token=urlParams.get('token');
-    // if (token){
-    //   localStorage.setItem('accessToken', token)
-    //   fetchEvents();
-    // }else{
-    //   setIsAuthenticated(false);
-    // }
   },[]);
 
   const filteredEvents=filterDate?events.filter((event)=>event.start.dateTime.startsWith(filterDate)):events;
 
   return (
     <>
-    <div>
-      {!isAuthenticated ? (
-        <div style={{ textAlign: 'center', marginTop: '20%' }}>
-          <Typography variant="h5" gutterBottom>
-            Welcome to Google Calendar Events
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+            Google Calendar Events
           </Typography>
-          <Button variant="contained" color="primary" onClick={handleSSO}>
-            Login with Google
-          </Button>
-        </div>
-      ) : (
-        <div>
-          <TextField
-            label="Filter by Date"
-            type="date"
-            InputLabelProps={{ shrink: true }}
-            onChange={(e) => setFilterDate(e.target.value)}
-          />
-          <Button variant="contained" color="primary" onClick={handleLogout}>
-            Logout
-          </Button>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Event Name</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Start Time</TableCell>
-                  <TableCell>Location</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredEvents.map((event) => (
-                  <TableRow key={event.id}>
-                    <TableCell>{event.summary}</TableCell>
-                    <TableCell>{extractDate(event.start.dateTime)}</TableCell>
-                    <TableCell>{extractTime(event.start.dateTime)}</TableCell>
-                    <TableCell>{event.location || ' '}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </div>
-      )}
-    </div>
+          {isAuthenticated && (
+            <IconButton color="inherit" onClick={handleLogout}>
+              <Logout />
+            </IconButton>
+          )}
+        </Toolbar>
+      </AppBar>
 
+      <Container sx={{ mt: 4 }}>
+        {!isAuthenticated ? (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '70vh',
+            }}
+          >
+            <Typography variant="h4" gutterBottom>
+              Welcome to Google Calendar Events
+            </Typography>
+            <Button variant="contained" color="info" onClick={handleSSO} size="large">
+              Login with Google
+            </Button>
+          </Box>
+        ) : (
+          <Box>
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+              <TextField
+                label="Filter by Date"
+                type="date"
+                InputLabelProps={{ shrink: true }}
+                onChange={(e) => setFilterDate(e.target.value)}
+                sx={{ width: '220px' }}
+              />
+              <Button
+                variant="contained"
+                onClick={() => setFilterDate('')}
+                disabled={!filterDate}
+              >
+                Clear Filter
+              </Button>
+            </Box>
+
+            {filteredEvents.length === 0 ? (
+              <Typography variant="body1" sx={{ textAlign: 'center', mt: 4 }}>
+                No events found for the selected date.
+              </Typography>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Event Name</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Start Time</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Location</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredEvents.map((event) => (
+                      <TableRow key={event.id}>
+                        <TableCell>{event.summary}</TableCell>
+                        <TableCell>{extractDate(event.start.dateTime)}</TableCell>
+                        <TableCell>{extractTime(event.start.dateTime)}</TableCell>
+                        <TableCell>{event.location || ' '}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Box>
+        )}
+      </Container>
     </>
-  )
+  );
 }
 
-export default App
+export default App;

@@ -10,12 +10,14 @@ const app = express();
 
 const PORT = 5000;
 
+// CORS Configuration
 app.use(
   cors({
-    origin: 'https://g-cal-sso.vercel.app',
-    credentials: true,
+    origin: 'https://g-cal-sso.vercel.app', 
+    credentials: true, 
   })
 );
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -29,8 +31,8 @@ passport.use(new GoogleStrategy({
 
 app.get('/auth/google', passport.authenticate('google', {
   scope: ['profile', 'email', 'https://www.googleapis.com/auth/calendar.events.readonly'],
-  accessType: 'offline', // This ensures you get a refresh token
-  prompt: 'consent', // This ensures you get a refresh token every time
+  accessType: 'offline',
+  prompt: 'consent',
 }));
 
 app.get('/auth/google/callback', passport.authenticate('google', { session: false }),

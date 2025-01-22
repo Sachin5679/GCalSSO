@@ -45,10 +45,8 @@ function App() {
     } catch (err: any) {
       console.error('Error fetching events:', err);
       if (err.response && err.response.status === 401) {
-        // Access token might be expired, try refreshing it
         const newAccessToken = await refreshAccessToken();
         if (newAccessToken) {
-          // Retry fetching events with the new access token
           await fetchEvents();
         } else {
           setIsAuthenticated(false);

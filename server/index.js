@@ -4,7 +4,6 @@ const passport = require('passport');
 const { google } = require('googleapis');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const { oauth2 } = require('googleapis/build/src/apis/oauth2');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 require('dotenv').config();
 const app = express();
@@ -12,65 +11,103 @@ const app = express();
 const PORT = 5000;
 
 app.use(
-    cors({
-      origin: 'http://localhost:5174',
-      credentials: true,
-    })
-  );
+  cors({
+    origin: 'http://localhost:5174',
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
-// app.use(passport.initialize());
 
 passport.use(new GoogleStrategy({
-    clientID:process.env.CLIENT_ID,clientSecret:process.env.CLIENT_SECRET,callbackURL:'/auth/google/callback',
+  clientID: process.env.CLIENT_ID,
+  clientSecret: process.env.CLIENT_SECRET,
+  callbackURL: '/auth/google/callback',
 }, (accessToken, refreshToken, profile, done) => {
-    return done(null,{accessToken, profile});
-}
-));
+  return done(null, { accessToken, refreshToken, profile });
+}));
 
-app.get('/auth/google', passport.authenticate('google',{scope:['profile','email','https://www.googleapis.com/auth/calendar.events.readonly']}));
+app.get('/auth/google', passport.authenticate('google', {
+  scope: ['profile', 'email', 'https://www.googleapis.com/auth/calendar.events.readonly'],
+  accessType: 'offline', // This ensures you get a refresh token
+  prompt: 'consent', // This ensures you get a refresh token every time
+}));
 
-app.get('/auth/google/callback', passport.authenticate('google',{session:false}),
-(req,res)=>{
-    const { accessToken, profile } = req.user;
-    res.cookie('token', accessToken, { httpOnly:true, secure:true });
+app.get('/auth/google/callback', passport.authenticate('google', { session: false }),
+  (req, res) => {
+    const { accessToken, refreshToken, profile } = req.user;
+    res.cookie('token', accessToken, { httpOnly: true, secure: true });
+    res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
     res.redirect(`http://localhost:5174`);
 });
 
 app.get('/events', async (req, res) => {
-    const token = req.cookies.token; // Correct way to read the cookie
-    if (!token) {
-      return res.status(400).json({ error: 'Access token is required' });
-    }
-    const oauth2Client = new google.auth.OAuth2();
-    oauth2Client.setCredentials({ access_token: token });
-  
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-    try {
-      const response = await calendar.events.list({
-        calendarId: 'primary',
-        timeMin: new Date().toISOString(),
-        maxResults: 10,
-        singleEvents: true,
-        orderBy: 'startTime',
-      });
-      const events = response.data.items;
-      res.json(events);
-    } catch (err) {
-      console.error('Error fetching events:', err);
-      res.status(500).json({ error: 'Failed to fetch events' });
-    }
-  });
+  const token = req.cookies.token;
+  const refreshToken = req.cookies.refreshToken;
 
-app.post('/logout',(req,res)=>{
-    res.clearCookie('token', {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
+  if (!token) {
+    return res.status(400).json({ error: 'Access token is required' });
+  }
+
+  const oauth2Client = new google.auth.OAuth2();
+  oauth2Client.setCredentials({ access_token: token, refresh_token: refreshToken });
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+  try {
+    const response = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin: new Date().toISOString(),
+      maxResults: 10,
+      singleEvents: true,
+      orderBy: 'startTime',
     });
-    res.json({ message: 'Logged out successfully' });
-})
+    const events = response.data.items;
+    res.json(events);
+  } catch (err) {
+    console.error('Error fetching events:', err);
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
 
-app.listen(PORT,()=>{
-    console.log(`Server running on http://localhost:${PORT}`);    
-})
+app.post('/refresh-token', async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(400).json({ error: 'Refresh token is required' });
+  }
+
+  const oauth2Client = new google.auth.OAuth2();
+  oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+  try {
+    const { credentials } = await oauth2Client.refreshAccessToken();
+    res.cookie('token', credentials.access_token, { httpOnly: true, secure: true });
+    res.json({ accessToken: credentials.access_token });
+  } catch (err) {
+    console.error('Error refreshing access token:', err);
+    res.status(500).json({ error: 'Failed to refresh access token' });
+  }
+});
+
+app.post('/logout', (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+  });
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+  });
+  res.json({ message: 'Logged out successfully' });
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});

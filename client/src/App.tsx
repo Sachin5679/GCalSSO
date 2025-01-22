@@ -16,66 +16,106 @@ import {
   AppBar,
   Toolbar,
   IconButton,
+  Pagination,
 } from '@mui/material';
 import { Logout } from '@mui/icons-material';
 
-interface Event{
+interface Event {
   id: string;
   summary: string;
-  start:{ dateTime:string };
-  end:{ dateTime:string };
+  start: { dateTime: string };
+  end: { dateTime: string };
   location?: string;
 }
+
 function App() {
-  const [events, setEvents]=useState<Event[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [filterDate, setFilterDate] = useState<string>('');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [page, setPage] = useState<number>(1); // Current page
+  const eventsPerPage = 5; // Number of events per page
 
-  const fetchEvents=async()=>{
-    try{
-      const response=await axios.get(`http://localhost:5000/events`,{
-        withCredentials:true,
+  const fetchEvents = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5000/events`, {
+        withCredentials: true,
       });
       setEvents(response.data);
       setIsAuthenticated(true);
-    } catch(err){
+    } catch (err: any) {
       console.error('Error fetching events:', err);
-      setIsAuthenticated(false);
+      if (err.response && err.response.status === 401) {
+        // Access token might be expired, try refreshing it
+        const newAccessToken = await refreshAccessToken();
+        if (newAccessToken) {
+          // Retry fetching events with the new access token
+          await fetchEvents();
+        } else {
+          setIsAuthenticated(false);
+        }
+      } else {
+        setIsAuthenticated(false);
+      }
     }
-  }
+  };
 
-  const handleSSO=()=>{
-    window.location.href='http://localhost:5000/auth/google';
-  }
-  const handleLogout=async()=>{
-    // localStorage.removeItem('accessToken');
-    // window.history.replaceState({}, document.title, window.location.pathname);
-    // setIsAuthenticated(false);
-    try{
+  const refreshAccessToken = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/refresh-token', {}, { withCredentials: true });
+      return response.data.accessToken;
+    } catch (err) {
+      console.error('Error refreshing access token:', err);
+      setIsAuthenticated(false);
+      return null;
+    }
+  };
+
+  const handleSSO = () => {
+    window.location.href = 'http://localhost:5000/auth/google';
+  };
+
+  const handleLogout = async () => {
+    try {
       await axios.post('http://localhost:5000/logout', {}, { withCredentials: true });
-    }catch(err){
+    } catch (err) {
       console.error('Error during logout:', err);
     }
     setIsAuthenticated(false);
     setEvents([]);
     setFilterDate('');
-  }
+  };
 
   const extractDate = (dateString: string): string => {
     const date = new Date(dateString);
     return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString();
   };
-  
+
   const extractTime = (dateString: string): string => {
     const date = new Date(dateString);
     return isNaN(date.getTime()) ? 'N/A' : date.toLocaleTimeString();
   };
 
-  useEffect(()=>{
-    fetchEvents();
-  },[]);
+  useEffect(() => {
+    const fetchData = async () => {
+      await fetchEvents();
+    };
 
-  const filteredEvents=filterDate?events.filter((event)=>event.start.dateTime.startsWith(filterDate)):events;
+    fetchData();
+  }, []);
+
+  // Filter events based on the selected date
+  const filteredEvents = filterDate
+    ? events.filter((event) => event.start.dateTime.startsWith(filterDate))
+    : events;
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
+  const startIndex = (page - 1) * eventsPerPage;
+  const paginatedEvents = filteredEvents.slice(startIndex, startIndex + eventsPerPage);
+
+  const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
+    setPage(value);
+  };
 
   return (
     <>
@@ -134,28 +174,40 @@ function App() {
                 No events found for the selected date.
               </Typography>
             ) : (
-              <TableContainer component={Paper}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Event Name</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Start Time</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Location</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredEvents.map((event) => (
-                      <TableRow key={event.id}>
-                        <TableCell>{event.summary}</TableCell>
-                        <TableCell>{extractDate(event.start.dateTime)}</TableCell>
-                        <TableCell>{extractTime(event.start.dateTime)}</TableCell>
-                        <TableCell>{event.location || ' '}</TableCell>
+              <>
+                <TableContainer component={Paper}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Event Name</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Start Time</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Location</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                      {paginatedEvents.map((event) => (
+                        <TableRow key={event.id}>
+                          <TableCell>{event.summary}</TableCell>
+                          <TableCell>{extractDate(event.start.dateTime)}</TableCell>
+                          <TableCell>{extractTime(event.start.dateTime)}</TableCell>
+                          <TableCell>{event.location || ' '}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {/* Pagination */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={handlePageChange}
+                    color="primary"
+                  />
+                </Box>
+              </>
             )}
           </Box>
         )}

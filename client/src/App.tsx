@@ -94,11 +94,7 @@ function App() {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      await fetchEvents();
-    };
-
-    fetchData();
+    fetchEvents();
   }, []);
 
   // Filter events based on the selected date

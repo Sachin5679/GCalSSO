@@ -12,7 +12,7 @@ const PORT = 5000;
 
 app.use(
   cors({
-    origin: 'http://localhost:5174',
+    origin: 'https://g-cal-sso.vercel.app',
     credentials: true,
   })
 );
@@ -43,7 +43,7 @@ app.get('/auth/google/callback', passport.authenticate('google', { session: fals
         sameSite: 'strict',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
-    res.redirect(`http://localhost:5174`);
+    res.redirect(`https://g-cal-sso.vercel.app`);
 });
 
 app.get('/events', async (req, res) => {

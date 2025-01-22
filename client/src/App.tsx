@@ -37,7 +37,7 @@ function App() {
 
   const fetchEvents = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/events`, {
+      const response = await axios.get(`https://g-cal-sso-backend.vercel.app/events`, {
         withCredentials: true,
       });
       setEvents(response.data);
@@ -61,7 +61,7 @@ function App() {
 
   const refreshAccessToken = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/refresh-token', {}, { withCredentials: true });
+      const response = await axios.post('https://g-cal-sso-backend.vercel.app/refresh-token', {}, { withCredentials: true });
       return response.data.accessToken;
     } catch (err) {
       console.error('Error refreshing access token:', err);
@@ -71,12 +71,12 @@ function App() {
   };
 
   const handleSSO = () => {
-    window.location.href = 'http://localhost:5000/auth/google';
+    window.location.href = 'https://g-cal-sso-backend.vercel.app/auth/google';
   };
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:5000/logout', {}, { withCredentials: true });
+      await axios.post('https://g-cal-sso-backend.vercel.app/logout', {}, { withCredentials: true });
     } catch (err) {
       console.error('Error during logout:', err);
     }

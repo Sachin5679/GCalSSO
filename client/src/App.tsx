@@ -1,13 +1,7 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { fetchEvents, logout } from './services/api';
+import EventTable from './components/EventTable';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   TextField,
   Button,
   Typography,
@@ -19,6 +13,7 @@ import {
   Pagination,
 } from '@mui/material';
 import { Logout } from '@mui/icons-material';
+
 
 interface Event {
   id: string;
@@ -32,41 +27,23 @@ function App() {
   const [events, setEvents] = useState<Event[]>([]);
   const [filterDate, setFilterDate] = useState<string>('');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [page, setPage] = useState<number>(1); 
-  const eventsPerPage = 5; 
+  const [page, setPage] = useState<number>(1);
+  const eventsPerPage = 5;
 
-  const fetchEvents = async () => {
-    try {
-      const response = await axios.get(`https://g-cal-sso-backend.vercel.app/events`, {
-        withCredentials: true,
-      });
-      setEvents(response.data);
-      setIsAuthenticated(true);
-    } catch (err: any) {
-      console.error('Error fetching events:', err);
-      if (err.response && err.response.status === 401) {
-        const newAccessToken = await refreshAccessToken();
-        if (newAccessToken) {
-          await fetchEvents();
-        } else {
-          setIsAuthenticated(false);
-        }
-      } else {
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const events = await fetchEvents();
+        setEvents(events);
+        setIsAuthenticated(true);
+      } catch (err) {
+        console.error('Error fetching events:', err);
         setIsAuthenticated(false);
       }
-    }
-  };
+    };
 
-  const refreshAccessToken = async () => {
-    try {
-      const response = await axios.post('https://g-cal-sso-backend.vercel.app/refresh-token', {}, { withCredentials: true });
-      return response.data.accessToken;
-    } catch (err) {
-      console.error('Error refreshing access token:', err);
-      setIsAuthenticated(false);
-      return null;
-    }
-  };
+    fetchData();
+  }, []);
 
   const handleSSO = () => {
     window.location.href = 'https://g-cal-sso-backend.vercel.app/auth/google';
@@ -74,39 +51,18 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await axios.post('https://g-cal-sso-backend.vercel.app/logout', {}, { withCredentials: true });
+      await logout();
+      setIsAuthenticated(false);
+      setEvents([]);
+      setFilterDate('');
     } catch (err) {
       console.error('Error during logout:', err);
     }
-    setIsAuthenticated(false);
-    setEvents([]);
-    setFilterDate('');
   };
 
-  const extractDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString();
-  };
-
-  const extractTime = (dateString: string): string => {
-    const date = new Date(dateString);
-    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleTimeString();
-  };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      await fetchEvents();
-    };
-
-    fetchData();
-  }, []);
-
-  // useEffect(() => {
-  //   console.log('Events:', events);
-  // }, [events]);
   const filteredEvents = filterDate
     ? events.filter((event) => {
-        const dateTime = event.start?.dateTime || ''; 
+        const dateTime = event.start?.dateTime || '';
         return dateTime.startsWith(filterDate);
       })
     : events;
@@ -156,9 +112,7 @@ function App() {
           <Box>
             <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
               <TextField
-                label="Filter by Date"
                 type="date"
-                InputLabelProps={{ shrink: true }}
                 onChange={(e) => setFilterDate(e.target.value)}
                 sx={{ width: '220px' }}
               />
@@ -177,30 +131,8 @@ function App() {
               </Typography>
             ) : (
               <>
-                <TableContainer component={Paper}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Event Name</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Start Time</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Location</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {paginatedEvents.map((event) => (
-                        <TableRow key={event.id}>
-                          <TableCell>{event.summary}</TableCell>
-                          <TableCell>{extractDate(event.start.dateTime)}</TableCell>
-                          <TableCell>{extractTime(event.start.dateTime)}</TableCell>
-                          <TableCell>{event.location || ' '}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                <EventTable events={paginatedEvents} />
 
-            
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                   <Pagination
                     count={totalPages}

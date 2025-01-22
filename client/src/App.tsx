@@ -32,8 +32,8 @@ function App() {
   const [events, setEvents] = useState<Event[]>([]);
   const [filterDate, setFilterDate] = useState<string>('');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [page, setPage] = useState<number>(1); // Current page
-  const eventsPerPage = 5; // Number of events per page
+  const [page, setPage] = useState<number>(1); 
+  const eventsPerPage = 5; 
 
   const fetchEvents = async () => {
     try {
@@ -101,18 +101,16 @@ function App() {
     fetchData();
   }, []);
 
-  // Log the events data
-  useEffect(() => {
-    console.log('Events:', events);
-  }, [events]);
+  // useEffect(() => {
+  //   console.log('Events:', events);
+  // }, [events]);
   const filteredEvents = filterDate
     ? events.filter((event) => {
-        const dateTime = event.start?.dateTime || ''; // Provide a default value
+        const dateTime = event.start?.dateTime || ''; 
         return dateTime.startsWith(filterDate);
       })
     : events;
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
   const startIndex = (page - 1) * eventsPerPage;
   const paginatedEvents = filteredEvents.slice(startIndex, startIndex + eventsPerPage);
@@ -202,7 +200,7 @@ function App() {
                   </Table>
                 </TableContainer>
 
-                {/* Pagination */}
+            
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                   <Pagination
                     count={totalPages}

@@ -1,5 +1,4 @@
 const express = require('express');
-const { OAuth2 } = require('google-auth-library');
 const passport = require('passport');
 const { google } = require('googleapis');
 const cors = require('cors');
@@ -10,14 +9,13 @@ const app = express();
 
 const PORT = 5000;
 
-// CORS Configuration
 app.use(
   cors({
     origin: 'https://g-cal-sso.vercel.app', 
     credentials: true, 
   })
 );
-app.options('*', cors()); // Handle preflight requests for all routes
+app.options('*', cors()); 
 
 app.use(express.json());
 app.use(cookieParser());
@@ -44,7 +42,7 @@ app.get('/auth/google/callback', passport.authenticate('google', { session: fals
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: 604800000,
     });
     res.redirect(`https://g-cal-sso.vercel.app`);
 });

@@ -102,9 +102,9 @@ function App() {
             }}
           >
             <Typography variant="h4" gutterBottom>
-              Welcome to Google Calendar Events
+              Google Calendar Events
             </Typography>
-            <Button variant="contained" color="info" onClick={handleSSO} size="large">
+            <Button variant="outlined" color="info" onClick={handleSSO} size="large">
               Login with Google
             </Button>
           </Box>

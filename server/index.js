@@ -17,6 +17,7 @@ app.use(
     credentials: true, 
   })
 );
+app.options('*', cors()); // Handle preflight requests for all routes
 
 app.use(express.json());
 app.use(cookieParser());
@@ -42,7 +43,7 @@ app.get('/auth/google/callback', passport.authenticate('google', { session: fals
     res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: true,
-        sameSite: 'strict',
+        sameSite: 'none',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
     res.redirect(`https://g-cal-sso.vercel.app`);

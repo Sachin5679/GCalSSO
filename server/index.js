@@ -24,7 +24,7 @@ app.use(cookieParser());
 passport.use(new GoogleStrategy({
   clientID: process.env.CLIENT_ID,
   clientSecret: process.env.CLIENT_SECRET,
-  callbackURL: '/auth/google/callback',
+  callbackURL: 'https://g-cal-sso-backend.vercel.app/auth/google/callback',
 }, (accessToken, refreshToken, profile, done) => {
   return done(null, { accessToken, refreshToken, profile });
 }));

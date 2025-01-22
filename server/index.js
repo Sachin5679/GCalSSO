@@ -39,7 +39,7 @@ app.get('/auth/google', passport.authenticate('google', {
 app.get('/auth/google/callback', passport.authenticate('google', { session: false }),
   (req, res) => {
     const { accessToken, refreshToken, profile } = req.user;
-    res.cookie('token', accessToken, { httpOnly: true, secure: true });
+    res.cookie('token', accessToken, { httpOnly: true, secure: true, sameSite: 'none' });
     res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: true,

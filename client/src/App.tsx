@@ -101,9 +101,15 @@ function App() {
     fetchData();
   }, []);
 
-  // Filter events based on the selected date
+  // Log the events data
+  useEffect(() => {
+    console.log('Events:', events);
+  }, [events]);
   const filteredEvents = filterDate
-    ? events.filter((event) => event.start.dateTime.startsWith(filterDate))
+    ? events.filter((event) => {
+        const dateTime = event.start?.dateTime || ''; // Provide a default value
+        return dateTime.startsWith(filterDate);
+      })
     : events;
 
   // Pagination logic
